@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>KIRIN: VIDEO SOUND SYNC</title>
+    <style>
+        :root { --electric: #00f2ff; --fire-core: #ffff00; --fire-edge: #ff4500; --trans-blue: rgba(0, 242, 255, 0.3); }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
+        
+        #camera-rig { 
+            position: relative; width: 100%; height: 100vh; 
+            transition: transform 0.4s cubic-bezier(0.15, 0, 0.05, 1);
+            will-change: transform;
+        }
+
+        /* --- TOGETHER STICKMAN: SKELETAL JOINTS --- */
+        .stickman { position: absolute; width: 40px; height: 100px; z-index: 100; transition: 0.8s; }
+        .head { width: 18px; height: 18px; border: 2px solid white; border-radius: 50%; margin: 0 auto; background: #000; }
+        .torso { width: 2px; height: 40px; background: white; margin: 0 auto; position: relative; }
+        
+        /* Limbs pivot at shoulder and hip joints */
+        .arm { position: absolute; width: 25px; height: 2px; background: white; top: 0; transform-origin: left center; }
+        .arm.left { right: 100%; transform: rotate(160deg); }
+        .arm.right { left: 100%; transform: rotate(-20deg); }
+        .leg { position: absolute; width: 30px; height: 2px; background: white; bottom: 0; transform-origin: left center; }
+        .leg.left { right: 100%; transform: rotate(110deg); }
+        .leg.right { left: 100%; transform: rotate(70deg); }
+        .sword { position: absolute; width: 50px; height: 3px; background: #fff; left: 100%; transform: rotate(-10deg); box-shadow: 0 0 15px var(--electric); }
+
+        /* --- STANDING EAGLE FLIGHT --- */
+        #flight-rig { position: absolute; width: 160px; height: 150px; bottom: 10%; left: 10%; opacity: 0; transition: 0.8s; z-index: 100; }
+        .eagle { position: absolute; width: 160px; height: 60px; bottom: 0; left: 0; }
+        .eagle-body { width: 45px; height: 20px; background: #221a10; margin: 15px auto; border-radius: 50%; }
+        .wing { position: absolute; width: 85px; height: 35px; background: #332a1a; top: -10px; border-radius: 0 100% 0 100%; }
+        .wing.left { right: 85%; transform-origin: right; animation: flap 0.3s infinite alternate; }
+        .wing.right { left: 85%; transform-origin: left; animation: flap 0.3s infinite alternate-reverse; }
+        @keyframes flap { from { transform: rotate(35deg); } to { transform: rotate(-35deg); } }
+
+        /* --- 3 BALL FIREBLOWS --- */
+        .fireball { position: absolute; width: 55px; height: 55px; border-radius: 50%; background: radial-gradient(circle, var(--fire-core) 30%, var(--fire-edge) 80%); box-shadow: 0 0 40px var(--fire-edge); filter: blur(2px); z-index: 95; }
+        .cloud { position: absolute; background: #0d0d1a; border-radius: 50%; filter: blur(45px); opacity: 0; z-index: 5; transition: 1.5s; }
+        @keyframes storm-flash { 0%, 98% { background: #0d0d1a; } 99% { background: #2a2a50; box-shadow: inset 0 0 50px var(--electric); } }
+        .storm-active { animation: storm-flash 2s infinite; }
+
+        /* --- ZZZ-SHAPE BOLT & KIRIN --- */
+        #kirin { position: absolute; top: -350px; left: 50%; transform: translateX(-50%) scale(1.5); width: 350px; opacity: 0; z-index: 200; filter: drop-shadow(0 0 40px var(--electric)); transition: all 0.4s; }
+        .bolt { 
+            position: absolute; top: 0; width: 250px; height: 100%; background: #fff; opacity: 0; z-index: 150; 
+            filter: drop-shadow(0 0 60px var(--electric)); 
+            clip-path: polygon(45% 0%, 100% 20%, 10% 45%, 90% 65%, 0% 100%, 25% 65%, 5% 45%, 65% 20%);
+        }
+        
+        #btn { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; padding: 25px 60px; background: #000; color: cyan; border: 3px solid cyan; cursor: pointer; font-family: 'Impact'; font-size: 28px; }
+        @keyframes impact-shake { 0% {transform:translate(0,0)} 50% {transform:translate(-30px,30px)} 100% {transform:translate(0,0)} }
+    </style>
+</head>
+<body>
+
+    <video id="kirin-sound" src="WhatsApp Video 2026-02-11 at 4.10.25 PM (1).mp4" style="display:none;"></video>
+
+    <button id="btn">STRIKE KIRIN</button>
+
+    <div id="camera-rig">
+        <div id="storm-clouds"></div>
+        <div id="flight-rig">
+            <div class="eagle"><div class="eagle-body"><div class="wing left"></div><div class="wing right"></div></div></div>
+            <div class="stickman" style="bottom: 50px; left: 60px;">
+                <div class="head"></div>
+                <div class="torso"><div class="arm left"></div><div class="arm right"><div class="sword"></div></div><div class="leg left"></div><div class="leg right"></div></div>
+            </div>
+        </div>
+
+        <div class="stickman" id="enemy" style="bottom: 10%; left: 80%;"><div class="head" style="border-color: red;"></div><div class="torso"><div class="arm left"></div><div class="arm right"></div><div class="leg left"></div><div class="leg right"></div></div></div>
+        
+        <svg id="kirin" viewBox="0 0 200 200">
+            <path fill="var(--trans-blue)" stroke="cyan" stroke-width="2" d="M30,80 L50,20 L100,5 L150,20 L170,80 L140,110 L100,90 L60,110 Z" />
+            <path d="M65,55 L85,65 M115,65 L135,55" stroke="white" stroke-width="4" /><path d="M60,105 Q100,165 140,105" fill="none" stroke="cyan" stroke-width="8" />
+        </svg>
+        <div class="bolt" id="bolt"></div>
+    </div>
+
+    <script>
+        const btn = document.getElementById('btn');
+        const sound = document.getElementById('kirin-sound');
+        const rig = document.getElementById('flight-rig');
+        const enemy = document.getElementById('enemy');
+        const bolt = document.getElementById('bolt');
+        const kirin = document.getElementById('kirin');
+        const camera = document.getElementById('camera-rig');
+
+        btn.addEventListener('click', () => {
+            btn.style.display = 'none';
+            sound.play(); // Play sound exactly from the video
+            
+            // Start flight
+            rig.style.opacity = '1';
+            rig.animate([{ left: '10%', bottom: '10%' }, { left: '35%', bottom: '45%', transform: 'rotate(10deg)' }], { duration: 1500, fill: 'forwards' });
+
+            // 1. Scene: 3 Fireball Blows (Centered Launch)
+            let fCount = 0;
+            let fInt = setInterval(() => {
+                const f = document.createElement('div');
+                f.className = 'fireball';
+                f.style.left = (rig.offsetLeft + 80) + 'px';
+                f.style.top = (rig.offsetTop + 20) + 'px';
+                document.body.appendChild(f);
+                f.animate([{ transform: 'scale(0.5)', opacity: 1 }, { transform: 'translate(450px, -650px) scale(5)', opacity: 0 }], 1200);
+                setTimeout(() => f.remove(), 1200);
+                fCount++; if(fCount >= 3) clearInterval(fInt);
+            }, 500);
+
+            // 2. Scene: Storm Clouds Gather
+            setTimeout(() => {
+                const sc = document.getElementById('storm-clouds');
+                for(let i=0; i<30; i++) {
+                    const c = document.createElement('div');
+                    c.className = 'cloud storm-active';
+                    c.style.width = '450px'; c.style.height = '180px';
+                    c.style.left = (Math.random()*110-10)+'%'; c.style.top = (Math.random()*30-5)+'%';
+                    sc.appendChild(c);
+                    setTimeout(() => c.style.opacity = '1', i * 60);
+                }
+            }, 2000);
+
+            // 3. Scene: Sky Enlarge View (Matches Sasuke shouting "Kirin!")
+            setTimeout(() => {
+                camera.style.transformOrigin = "center 30%";
+                camera.style.transform = "scale(1.4)";
+                kirin.style.opacity = '0.9';
+                kirin.style.top = '5%';
+            }, 3500);
+
+            // 4. Perfect Aligned Descent & Impact Enlarge (Matches Lightning Strike)
+            setTimeout(() => {
+                const target = enemy.getBoundingClientRect();
+                const targetX = target.left + (target.width / 2);
+
+                camera.style.transformOrigin = `${targetX}px ${target.top}px`;
+                camera.style.transform = "scale(3.0)"; // Massive Impact Zoom
+                
+                kirin.style.left = `${targetX}px`;
+                kirin.style.top = '60%'; 
+                bolt.style.left = `${targetX - 125}px`;
+                
+                document.body.style.animation = 'impact-shake 0.05s infinite';
+                let strike = setInterval(() => {
+                    bolt.style.opacity = '1';
+                    bolt.style.width = (Math.random() * 80 + 200) + 'px';
+                    setTimeout(() => bolt.style.opacity = '0.4', 20);
+                }, 50);
+
+                setTimeout(() => {
+                    clearInterval(strike);
+                    document.body.style.animation = '';
+                    camera.style.transform = "scale(1)"; 
+                    kirin.style.opacity = '0'; bolt.style.opacity = '0';
+                    enemy.style.opacity = '0';
+                }, 2000);
+            }, 6000);
+        });
+    </script>
+</body>
+</html>
